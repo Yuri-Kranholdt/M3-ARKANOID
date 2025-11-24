@@ -1,26 +1,17 @@
-//#include "raylib.h"
-//#include <vector>
 #include <algorithm>
 #include <iostream>
 #include <cstdlib>
 #include <ctime>
-//#include "map.h"
-//#include "config.h"
 #include "game_loop.h"
-
-//------------------------------------------------------------------------------------
-// Program main entry point
-//------------------------------------------------------------------------------------
-
-//int screenWidth = 800;
-//int screenHeight = 450;
+#include "assets.h"
+#include <cmath>
 
 
 int per_line = 10;
 
 int bloco_h = 30;
 
-int wall_width = bloco_h;
+int wall_width = 15;
 
 int bloco_w = (SCREEN_WIDTH - (wall_width * 2)) / per_line;
 
@@ -35,12 +26,28 @@ int tile_height = 5;
 
 std::vector<Bloco> blocos;
 
-Bloco placa = {1, SCREEN_WIDTH/2, SCREEN_HEIGHT-20, 80, 20, true, false, MAROON, 5};
+Bloco placa = {1, SCREEN_WIDTH/2, SCREEN_HEIGHT-bloco_h, 80, bloco_h, true, false, MAROON, 5};
 Vector2 ballPosition = { 0, 0 };
 
+Rectangle hor_src_wall;
+Rectangle ver_src_wall;
 
-int vx = 0;
-int vy = 0;
+//Rectangle src = {0, 0, (float)GetAssets()->pad1.width, (float)GetAssets()->pad1.height};
+
+float speed = 200.0f;
+
+float vx = 0.0;
+float vy = 0.0;
+ // modulo do vetor
+
+
+void start_velocity(){
+    vx = 0.7f;
+    vy = 0.7f;
+    float len = pow(vx*vx + vy*vy, 1/2);
+    vx = vx/len;
+    vy = vy/len;
+}
 
 void block_colision(Bloco *bloco){
 
@@ -49,7 +56,7 @@ void block_colision(Bloco *bloco){
        ballPosition.y + RAIO >= bloco->y && 
        ballPosition.y - RAIO <= bloco->y + bloco->h){
 
-        if(!bloco->is_wall){
+        if(!bloco->is_wall && !bloco->is_steel){
             if(bloco->vida - 1 <= 0){
                 bloco->is_dead = true;
             }
@@ -66,29 +73,38 @@ void block_colision(Bloco *bloco){
        int touched = std::min({overlap_left, overlap_right, overlap_top, overlap_bottom});
 
        if(touched == overlap_left){
-            vx = -vx;
+            vx = -fabs(vx);
             ballPosition.x = bloco->x - RAIO;
        }
        else if (touched == overlap_right) {
-            vx = abs(vx);
+            vx = fabs(vx);
             ballPosition.x = bloco->x + bloco->w + RAIO;
        }
        else if (touched == overlap_top){
-             vy = -vy;
+             vy = -fabs(vy);
             ballPosition.y = bloco->y - RAIO;
        }
        else if (touched == overlap_bottom) {
-            vy = abs(vy);
+            vy = fabs(vy);
             ballPosition.y = bloco->y + bloco->h + RAIO;
        }
 
        else {
-            vx = -vx;
-            vy = -vy;
+            vx = -fabs(vx);
+            vy = -fabs(vy);
        }
 
     }
 
+}
+
+float get_difficulty(int difficulty){
+    float value = 0.0;
+
+    if(difficulty == 1) value = 0.25f;
+    if (difficulty == 2) value = 0.50f;
+
+    return value;
 }
 
 Color cor_aleatoria(){
@@ -100,7 +116,9 @@ Color cor_aleatoria(){
 }
 
 void read_map(const Mapa& matriz){
-    int total_lines = (SCREEN_HEIGHT-(bloco_h*2))/bloco_h;
+    std::cout << "linhas->" << matriz.size() << std::endl;
+    std::cout << "colunas->" << matriz[0].size() << std::endl;
+    int total_lines = matriz.size();
 
     for(int i=0; i<total_lines; i++){
         for(int j=0; j<per_line; j++){
@@ -108,7 +126,7 @@ void read_map(const Mapa& matriz){
             if(index != 0){
                 Color cor = cores[index-1];
                 int life = index == 8 or index == 9 ? 2 : 1;
-                bool is_wall = index == 8 ? true : false;
+                bool is_steel = index == 8 ? true : false;
 
                 blocos.push_back({
                     life, 
@@ -116,27 +134,55 @@ void read_map(const Mapa& matriz){
                     bloco_h + (i*bloco_h),
                     bloco_w,
                     bloco_h,
-                    is_wall,
+                    false,
                     false,
                     cor,
-                    0
+                    0,
+                    is_steel
                 });
             }
         }
     }
 }
 
+void deallocate_map(){
+    placa.x = SCREEN_WIDTH/2;
+    placa.y = SCREEN_HEIGHT-bloco_h;
+    starting = true;
+    std::vector<Bloco>().swap(blocos);
+}
+
+void load_map(int level){
+    read_map(GetMapa(level));
+    init_walls();
+}
+
 void init_walls(){
-    blocos.push_back({1, 0, bloco_h, wall_width, SCREEN_HEIGHT-bloco_h, true, false, Color{137, 137, 137, 255}, 0});
-    blocos.push_back({1, SCREEN_WIDTH-wall_width, bloco_h, wall_width, SCREEN_HEIGHT-bloco_h, true, false, Color{137, 137, 137, 255}, 0});
-    blocos.push_back({1, 0, 0, SCREEN_WIDTH, bloco_h, true, false, Color{137, 137, 137, 255}, 0});
+    hor_src_wall = {0, 0, (float)GetAssets()->hor_walls.width, (float)GetAssets()->hor_walls.height};
+    ver_src_wall = {0, 0, (float)GetAssets()->ver_walls.width, (float)GetAssets()->ver_walls.height};
+    //blocos.push_back({1, 0, bloco_h, wall_width, SCREEN_HEIGHT-bloco_h, true, false, Color{137, 137, 137, 255}, 0, false});
+    blocos.push_back({1, 0, wall_width, wall_width, SCREEN_HEIGHT-wall_width, true, false, Color{137, 137, 137, 255}, 0, false});
+    blocos.push_back({1, SCREEN_WIDTH-wall_width, wall_width, wall_width, SCREEN_HEIGHT-wall_width, true, false, Color{137, 137, 137, 255}, 0, false});
+    //blocos.push_back({1, SCREEN_WIDTH-wall_width, bloco_h, wall_width, SCREEN_HEIGHT-bloco_h, true, false, Color{137, 137, 137, 255}, 0, false});
+    blocos.push_back({1, 0, 0, SCREEN_WIDTH, wall_width, true, false, Color{137, 137, 137, 255}, 0, false});
 }
 
 void draw_blocks(){
     for(Bloco &block : blocos){
         if(!block.is_dead){
-            DrawRectangle(block.x, block.y, block.w, block.h, block.color);
-            if(!block.is_wall) DrawRectangleLinesEx((Rectangle){block.x, block.y, block.w, block.h}, 1.5, BLACK);
+            if(!block.is_wall){
+                DrawRectangle(block.x, block.y, block.w, block.h, block.color);
+                DrawRectangleLinesEx((Rectangle){block.x, block.y, block.w, block.h}, 1.5, BLACK);
+            }
+            else {
+                Rectangle dst = { block.x, block.y, block.w, block.h };
+                if(block.y == 0){
+                    //dst.height -= 15;
+                    DrawTexturePro(GetAssets()->ver_walls, ver_src_wall, dst, {0,0}, 0.0f, WHITE);
+                    continue;
+                }
+                DrawTexturePro(GetAssets()->hor_walls, hor_src_wall, dst, {0,0}, 0.0f, WHITE);
+            }
             block_colision(&block);
         }
     }
@@ -151,26 +197,40 @@ void draw_background(){
     }
 }
 
-void game_loop(int &scene, int* level)
+void game_loop(int &scene, int *difficulty)
 {
-    // Initialization
-    //--------------------------------------------------------------------------------------
-    
-    //init_walls();
-
-    //read_map(GetMapa(2));              
+    float dt = GetFrameTime();              
     if (IsKeyDown(KEY_RIGHT)) placa.x += placa.velocity;
     if (IsKeyDown(KEY_LEFT)) placa.x -= placa.velocity;
     if (IsKeyDown(KEY_ESCAPE)) {
         scene = 2;
         return;
     }
-        draw_background();
 
-        DrawText("move the ball with arrow keys", 10, 10, 20, DARKGRAY);
+        ballPosition.x += vx * speed * dt;
+        ballPosition.y += vy * speed * dt;
+        //draw_background();
+        DrawTexture(GetAssets()->background, 0, 0, WHITE);
 
-        DrawCircleV(ballPosition, RAIO, MAROON);
-        DrawRectangle(placa.x, placa.y, placa.w, placa.h, MAROON);
+        DrawRectangleGradientV(
+            0, 0, bloco_h, SCREEN_HEIGHT,
+            { 0, 0, 0, 100 },   // topo mais opaco
+            { 0, 0, 0,   50 }    // base transparente
+        );
+
+        DrawRectangleGradientV(
+            bloco_h, 0, SCREEN_WIDTH, bloco_h,
+            { 0, 0, 0, 100 },   // topo mais opaco
+            { 0, 0, 0, 100}    // base transparente
+        );
+
+        DrawCircleV(ballPosition, RAIO, WHITE);
+        DrawCircleV(ballPosition, RAIO-2, GREEN);
+        //DrawRectangle(placa.x, placa.y, placa.w, placa.h, MAROON);
+
+        Rectangle src = {0, 0, (float)GetAssets()->pad1.width, (float)GetAssets()->pad1.height};
+        Rectangle dst = { placa.x, placa.y, placa.w, placa.h };
+        DrawTexturePro(GetAssets()->pad1, src, dst, {0,0}, 0.0f, WHITE);
         draw_blocks();
 
         if(ballPosition.y <= 0 || ballPosition.y >= SCREEN_HEIGHT){
@@ -180,8 +240,8 @@ void game_loop(int &scene, int* level)
         block_colision(&placa);
 
         if(IsKeyDown(KEY_SPACE) && starting){
-            vy = 4;
-            vx = 1;
+            speed += speed * get_difficulty(*difficulty);
+            start_velocity();
             starting = false;
         }
 
@@ -191,19 +251,16 @@ void game_loop(int &scene, int* level)
         }
 
 
-        if(placa.x+placa.w >= SCREEN_WIDTH-wall_width){
+        if(placa.x+placa.w > SCREEN_WIDTH-wall_width){
             placa.x = (SCREEN_WIDTH-wall_width)-placa.w;
         }
 
-        if(placa.x <= wall_width){
+        if(placa.x < wall_width){
             placa.x = wall_width;
         }
 
         if(ballPosition.x <= 0 || ballPosition.x >= SCREEN_WIDTH){
             vx = -vx;
         }
-
-        ballPosition.x += vx;
-        ballPosition.y += vy;
 
 }

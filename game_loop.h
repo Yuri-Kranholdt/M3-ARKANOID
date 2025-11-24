@@ -16,6 +16,7 @@ struct Bloco {
   bool is_dead;
   Color color;
   int velocity;
+  bool is_steel;
 };
 
 extern int per_line;
@@ -31,8 +32,8 @@ extern std::vector<Bloco> blocos;
 extern Bloco placa;
 extern Vector2 ballPosition;
 
-extern int vx;
-extern int vy;
+extern float vx;
+extern float vy;
 
 
 // -------------------------------------------------
@@ -45,5 +46,7 @@ void read_map(const Mapa& matriz);
 void init_walls();
 void draw_blocks();
 void game_loop(int &scene, int* level);
+void load_map(int level);
+void deallocate_map();
 
 #endif
