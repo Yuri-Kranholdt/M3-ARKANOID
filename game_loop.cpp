@@ -2,7 +2,7 @@
 
 //int pontuação = 0;
 
-int vida = 3;
+int vida;
 
 int *pontuação;
 
@@ -31,6 +31,8 @@ int pad_width = 80;
 
 int expand_counter = 0;
 int pad_vel = 5;
+
+int blocks_dead_num;
 
 std::vector<Bloco> blocos;
 std::vector<Power_Up> powers;
@@ -79,6 +81,7 @@ bool block_colision(Bloco *bloco){
         if(!bloco->is_wall && !bloco->is_steel){
             if(bloco->vida - 1 <= 0){
                 bloco->is_dead = true;
+                blocks_dead_num += 1;
                 *pontuação += Get_BlockAttr(bloco->sprite_index).points * multiplicador;
                 gen_power(bloco);
             }
@@ -138,6 +141,7 @@ void read_map(const Mapa& matriz){
         for(int j=0; j<per_line; j++){
             int index = matriz[i][j];
             if(index != 0){
+                printf("valor -> %d", index);
                 int life = index == 8 or index == 9 ? 2 : 1;
                 bool is_steel = index == 8 ? true : false;
 
@@ -163,12 +167,15 @@ void deallocate_map(){
     placa.y = SCREEN_HEIGHT-bloco_h;
     starting = true;
     std::vector<Bloco>().swap(blocos);
-    pontuação = 0;
+    std::vector<Power_Up>().swap(powers);
+    *pontuação = 0;
 }
 
 void load_map(int level, int *score){
     read_map(GetMapa(level));
     pontuação = score;
+    vida = 3;
+    blocks_dead_num = 0;
     init_walls();
 }
 
@@ -254,7 +261,7 @@ void power_update(){
     }
 }
 
-void game_loop(int &scene, int *difficulty, int *high_score)
+void game_loop(int &scene, int *difficulty, int *high_score, int* level)
 {
     float dt = GetFrameTime();              
     if (IsKeyDown(KEY_RIGHT)) placa.x += placa.velocity;
@@ -294,6 +301,29 @@ void game_loop(int &scene, int *difficulty, int *high_score)
         power_update();
 
         block_colision(&placa);
+
+        // ir para tela de game over
+        if(vida <= 0){
+            scene = 5;
+            return;
+        }
+
+        // trocar de level ao vencer
+        // -3 para desconsiderar os 3 muros
+        if(blocks_dead_num == (int)blocos.size()-3){
+            if(*level+1 <= MAPAS.size()){
+                int temp = *pontuação;
+                deallocate_map();
+                *pontuação = temp;
+                *level += 1;
+                load_map(*level, pontuação);
+            }
+            else{
+                // voltar ao menu se tiver vencido o level final
+                scene = 1;
+            }
+            
+        }
 
         if(IsKeyDown(KEY_SPACE) && starting){
             start_velocity();

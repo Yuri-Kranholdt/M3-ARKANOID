@@ -1,6 +1,7 @@
 #include "raylib.h"
 #include "config.h"
 #include "game_loop.h"
+#include "game_over.h"
 #include "pause.h"
 #include "assets.h"
 #include "menu.h"
@@ -20,10 +21,6 @@ int main(void)
     int scene = 1;
     bool exit = false;
 
-    init_walls();
-
-    //read_map(GetMapa(nivel));
-
     InitWindow(REAL_WIDTH, SCREEN_HEIGHT, "Arkanoid M3");
 
     LoadAssets();
@@ -42,13 +39,16 @@ int main(void)
         
         BeginDrawing();
         if(!scene){
-            game_loop(scene, &difficulty, &high_score);
+            game_loop(scene, &difficulty, &high_score, &nivel);
         }
         else if(scene == 1){
             menu_loop(&scene, &nivel, &difficulty, &score, &exit);
         }
         else if(scene == 2){
             pause_loop(&scene, &score, &high_score);
+        }
+        else if(scene == 5){
+            game_over_loop(&scene, &score, &high_score);
         }
         EndDrawing();
     }

@@ -58,3 +58,9 @@ bool delay(double value, Color *cor){
     return finish;
 }
 
+void up_high_score(int *high_score, int* score, int* scene){
+    if(*high_score < *score) *high_score = *score; // se superar o recorde salva em high_score
+            *score = 0;
+            *scene = 1;
+}
+
