@@ -14,7 +14,7 @@ struct Bloco {
   int h;
   bool is_wall;
   bool is_dead;
-  Color color;
+  int sprite_index;
   int velocity;
   bool is_steel;
 };

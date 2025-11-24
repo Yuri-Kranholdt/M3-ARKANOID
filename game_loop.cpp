@@ -6,6 +6,7 @@
 #include "assets.h"
 #include <cmath>
 
+int pontuação = 0;
 
 int per_line = 10;
 
@@ -26,22 +27,19 @@ int tile_height = 5;
 
 std::vector<Bloco> blocos;
 
-Bloco placa = {1, SCREEN_WIDTH/2, SCREEN_HEIGHT-bloco_h, 80, bloco_h, true, false, MAROON, 5};
+Bloco placa = {1, SCREEN_WIDTH/2, SCREEN_HEIGHT-bloco_h, 80, bloco_h, true, false, 0, 5};
 Vector2 ballPosition = { 0, 0 };
 
 Rectangle hor_src_wall;
 Rectangle ver_src_wall;
 
-//Rectangle src = {0, 0, (float)GetAssets()->pad1.width, (float)GetAssets()->pad1.height};
-
-float speed = 200.0f;
+float speed = 0.0;
 
 float vx = 0.0;
 float vy = 0.0;
- // modulo do vetor
-
 
 void start_velocity(){
+    speed = 250.0f;
     vx = 0.7f;
     vy = 0.7f;
     float len = pow(vx*vx + vy*vy, 1/2);
@@ -116,15 +114,12 @@ Color cor_aleatoria(){
 }
 
 void read_map(const Mapa& matriz){
-    std::cout << "linhas->" << matriz.size() << std::endl;
-    std::cout << "colunas->" << matriz[0].size() << std::endl;
     int total_lines = matriz.size();
 
     for(int i=0; i<total_lines; i++){
         for(int j=0; j<per_line; j++){
             int index = matriz[i][j];
             if(index != 0){
-                Color cor = cores[index-1];
                 int life = index == 8 or index == 9 ? 2 : 1;
                 bool is_steel = index == 8 ? true : false;
 
@@ -136,7 +131,7 @@ void read_map(const Mapa& matriz){
                     bloco_h,
                     false,
                     false,
-                    cor,
+                    index-1,
                     0,
                     is_steel
                 });
@@ -160,28 +155,26 @@ void load_map(int level){
 void init_walls(){
     hor_src_wall = {0, 0, (float)GetAssets()->hor_walls.width, (float)GetAssets()->hor_walls.height};
     ver_src_wall = {0, 0, (float)GetAssets()->ver_walls.width, (float)GetAssets()->ver_walls.height};
-    //blocos.push_back({1, 0, bloco_h, wall_width, SCREEN_HEIGHT-bloco_h, true, false, Color{137, 137, 137, 255}, 0, false});
-    blocos.push_back({1, 0, wall_width, wall_width, SCREEN_HEIGHT-wall_width, true, false, Color{137, 137, 137, 255}, 0, false});
-    blocos.push_back({1, SCREEN_WIDTH-wall_width, wall_width, wall_width, SCREEN_HEIGHT-wall_width, true, false, Color{137, 137, 137, 255}, 0, false});
-    //blocos.push_back({1, SCREEN_WIDTH-wall_width, bloco_h, wall_width, SCREEN_HEIGHT-bloco_h, true, false, Color{137, 137, 137, 255}, 0, false});
-    blocos.push_back({1, 0, 0, SCREEN_WIDTH, wall_width, true, false, Color{137, 137, 137, 255}, 0, false});
+    blocos.push_back({1, 0, wall_width, wall_width, SCREEN_HEIGHT-wall_width, true, false, 0, 0, false});
+    blocos.push_back({1, SCREEN_WIDTH-wall_width, wall_width, wall_width, SCREEN_HEIGHT-wall_width, true, false, 0, 0, false});
+    blocos.push_back({1, 0, 0, SCREEN_WIDTH, wall_width, true, false, 0, 0, false});
 }
 
 void draw_blocks(){
     for(Bloco &block : blocos){
         if(!block.is_dead){
+            Rectangle dst = { block.x, block.y, block.w, block.h };
             if(!block.is_wall){
-                DrawRectangle(block.x, block.y, block.w, block.h, block.color);
-                DrawRectangleLinesEx((Rectangle){block.x, block.y, block.w, block.h}, 1.5, BLACK);
+                Texture2D asset = Get_BlockText(block.sprite_index);
+                Rectangle src = {0, 0, asset.width, asset.height};
+                DrawTexturePro(asset, src, dst, {0,0}, 0.0f, WHITE);
             }
             else {
-                Rectangle dst = { block.x, block.y, block.w, block.h };
                 if(block.y == 0){
-                    //dst.height -= 15;
                     DrawTexturePro(GetAssets()->ver_walls, ver_src_wall, dst, {0,0}, 0.0f, WHITE);
-                    continue;
+                }else {
+                    DrawTexturePro(GetAssets()->hor_walls, hor_src_wall, dst, {0,0}, 0.0f, WHITE);
                 }
-                DrawTexturePro(GetAssets()->hor_walls, hor_src_wall, dst, {0,0}, 0.0f, WHITE);
             }
             block_colision(&block);
         }
@@ -212,12 +205,14 @@ void game_loop(int &scene, int *difficulty)
         //draw_background();
         DrawTexture(GetAssets()->background, 0, 0, WHITE);
 
+        //sombra das paredes
         DrawRectangleGradientV(
             0, 0, bloco_h, SCREEN_HEIGHT,
             { 0, 0, 0, 100 },   // topo mais opaco
             { 0, 0, 0,   50 }    // base transparente
         );
 
+        //sombra das paredes
         DrawRectangleGradientV(
             bloco_h, 0, SCREEN_WIDTH, bloco_h,
             { 0, 0, 0, 100 },   // topo mais opaco
@@ -226,22 +221,17 @@ void game_loop(int &scene, int *difficulty)
 
         DrawCircleV(ballPosition, RAIO, WHITE);
         DrawCircleV(ballPosition, RAIO-2, GREEN);
-        //DrawRectangle(placa.x, placa.y, placa.w, placa.h, MAROON);
 
         Rectangle src = {0, 0, (float)GetAssets()->pad1.width, (float)GetAssets()->pad1.height};
         Rectangle dst = { placa.x, placa.y, placa.w, placa.h };
         DrawTexturePro(GetAssets()->pad1, src, dst, {0,0}, 0.0f, WHITE);
         draw_blocks();
 
-        if(ballPosition.y <= 0 || ballPosition.y >= SCREEN_HEIGHT){
-            vy = -vy;
-        }
-
         block_colision(&placa);
 
         if(IsKeyDown(KEY_SPACE) && starting){
-            speed += speed * get_difficulty(*difficulty);
             start_velocity();
+            speed += speed * get_difficulty(*difficulty);
             starting = false;
         }
 
@@ -257,10 +247,6 @@ void game_loop(int &scene, int *difficulty)
 
         if(placa.x < wall_width){
             placa.x = wall_width;
-        }
-
-        if(ballPosition.x <= 0 || ballPosition.x >= SCREEN_WIDTH){
-            vx = -vx;
         }
 
 }

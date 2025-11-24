@@ -22,6 +22,7 @@ int main(void)
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "raylib [core] example - input keys");
 
     LoadAssets();
+    init_blockTexures();
 
     srand(static_cast<unsigned int>(time(0)));
     SetExitKey(KEY_NULL);
@@ -46,6 +47,7 @@ int main(void)
         EndDrawing();
     }
     UnloadAssets();
+    UnloadBlocks();
     // De-Initialization
     //--------------------------------------------------------------------------------------
     CloseWindow();        // Close window and OpenGL context

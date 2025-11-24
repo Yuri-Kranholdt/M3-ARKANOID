@@ -3,11 +3,24 @@
 
 #include "raylib.h"
 #include <iostream>
+#include <vector>
+
+struct Block_Texture {
+    Texture2D tex;
+};
 
 struct options {
     std::string phrase;
     bool can_change;
 };
+
+void init_blockTexures();
+
+void UnloadBlocks();
+
+Texture2D Get_BlockText(int i);
+
+extern std::vector<Block_Texture> blocks_texture;
 
 extern const Color cores[9];
 
