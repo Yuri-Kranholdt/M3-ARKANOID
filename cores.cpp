@@ -2,8 +2,11 @@
 #include <iostream>
 
 std::vector<Block_Texture> blocks_texture;
+std::vector<Texture2D> powers_texture;
 
 void init_blockTexures() {
+
+    const int base_point = 50;
     
     const char* arquivosTextura[9] = {
         "img/blocks/azul.png",
@@ -18,12 +21,36 @@ void init_blockTexures() {
     };
 
     for (int i = 0; i < 9; i++) {
-        blocks_texture.push_back({LoadTexture(arquivosTextura[i])});
+        int block_points = i != 9 ? base_point + (i*10) : 0; // bloco dourado n tem pontos(indestrutivel)
+        blocks_texture.push_back({LoadTexture(arquivosTextura[i]), block_points});
     }
+}
+
+void init_powerTextures(){
+
+    const char* arquivosTextura[4] = {
+        "img/power/c.png",
+        "img/power/e.png",
+        "img/power/l.png",
+        "img/power/s.png",
+    };
+
+    for (int i = 0; i < 4; i++) {
+        // bloco dourado n tem pontos(indestrutivel)
+        powers_texture.push_back({LoadTexture(arquivosTextura[i])});
+    }
+}
+
+Texture2D* Get_Power(int i ){
+    return &powers_texture[i];
 }
 
 Texture2D Get_BlockText(int i){
     return blocks_texture[i].tex;
+}
+
+Block_Texture Get_BlockAttr(int i){
+    return blocks_texture[i];
 }
 
 void UnloadBlocks(){

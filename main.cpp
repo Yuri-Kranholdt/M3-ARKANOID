@@ -11,18 +11,24 @@ int nivel = 0;
 
 int difficulty = 0;
 
+int high_score = 0;
+
+int score = 0;
+
 int main(void)
 {
     int scene = 1;
+    bool exit = false;
 
     init_walls();
 
     //read_map(GetMapa(nivel));
 
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "raylib [core] example - input keys");
+    InitWindow(REAL_WIDTH, SCREEN_HEIGHT, "Arkanoid M3");
 
     LoadAssets();
     init_blockTexures();
+    init_powerTextures();
 
     srand(static_cast<unsigned int>(time(0)));
     SetExitKey(KEY_NULL);
@@ -31,18 +37,18 @@ int main(void)
     //--------------------------------------------------------------------------------------
 
     // Main game loop
-    while (!WindowShouldClose())    // Detect window close button or ESC key
+    while (!WindowShouldClose() && !exit)    // Detect window close button or ESC key
     {
         
         BeginDrawing();
         if(!scene){
-            game_loop(scene, &difficulty);
+            game_loop(scene, &difficulty, &high_score);
         }
         else if(scene == 1){
-            menu_loop(&scene, &nivel, &difficulty);
+            menu_loop(&scene, &nivel, &difficulty, &score, &exit);
         }
         else if(scene == 2){
-            pause_loop(&scene);
+            pause_loop(&scene, &score, &high_score);
         }
         EndDrawing();
     }

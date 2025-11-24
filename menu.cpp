@@ -43,7 +43,7 @@ void update_change(int index, std::vector<std::string> values_list, int *variabl
 }
 
 
-void menu_loop(int* scene, int *level, int *difficulty){
+void menu_loop(int* scene, int *level, int *difficulty, int *score, bool *exit){
               
     if (IsKeyDown(KEY_ENTER)) *scene = 0;
 
@@ -60,12 +60,12 @@ void menu_loop(int* scene, int *level, int *difficulty){
     if(exit_code){
 
         if(selecionada == 0) {
-            load_map(*level);
+            load_map(*level, score);
             //printf("level ->%d\n", *level);
             *scene = 0;
         }
-        else {
-            std::cout << selecionada << std::endl;
+        else if(selecionada == 3){
+            *exit = true;
         }
     }
     
@@ -73,13 +73,13 @@ void menu_loop(int* scene, int *level, int *difficulty){
     update_change(1, niveis, level);
     ClearBackground(BLACK);
 
-    DrawTextCenter("ARKANOID", F_SIZE*2, SCREEN_HEIGHT/4, WHITE);
+    DrawTextCenter("ARKANOID", F_SIZE*2, SCREEN_HEIGHT/4, WHITE, REAL_WIDTH);
 
     for (int i = 0; i<opcoes.size(); i++) {
         int h_positon = (SCREEN_HEIGHT/2 + (i * padding));
         std::string phrase = i == selecionada && opcoes[i].can_change ? "< " + opcoes[i].phrase + " >" : opcoes[i].phrase;
         Color cor = (i == selecionada) ? corAtual : WHITE;
-        Vector2 pos = DrawTextCenter(phrase.c_str(), F_SIZE, h_positon, cor);
+        Vector2 pos = DrawTextCenter(phrase.c_str(), F_SIZE, h_positon, cor, REAL_WIDTH);
         if(i == selecionada) DrawTextureEx(GetAssets()->seta, {pos.x-30, (float)h_positon}, 0.0f, 0.1f, WHITE);
 
     }

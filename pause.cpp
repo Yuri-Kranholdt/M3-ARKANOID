@@ -13,7 +13,7 @@ namespace {
     Color corAtual = WHITE;
 }
 
-void pause_loop(int* scene){
+void pause_loop(int* scene, int *score, int *high_score){
               
     if (IsKeyDown(KEY_ENTER)) *scene = 0;
 
@@ -31,6 +31,9 @@ void pause_loop(int* scene){
         if(selecionada == 0) *scene = 0;
         else if (selecionada ==1) {
             deallocate_map();
+
+            if(*high_score < *score) *high_score = *score; // se superar o recorde salva em high_score
+            *score = 0;
             *scene = 1;
         }
         
@@ -38,12 +41,12 @@ void pause_loop(int* scene){
 
     ClearBackground(BLACK);
 
-    DrawTextCenter("PAUSADO", F_SIZE*2, SCREEN_HEIGHT/4, WHITE);
+    DrawTextCenter("PAUSADO", F_SIZE*2, SCREEN_HEIGHT/4, WHITE, REAL_WIDTH);
 
     for (int i = 0; i<opcoes.size(); i++) {
         int h_positon = (SCREEN_HEIGHT/2 + (i * padding));
         Color cor = (i == selecionada) ? corAtual : WHITE;
-        Vector2 pos = DrawTextCenter(opcoes[i].c_str(), F_SIZE, h_positon, cor);
+        Vector2 pos = DrawTextCenter(opcoes[i].c_str(), F_SIZE, h_positon, cor, REAL_WIDTH);
         if(i == selecionada) DrawTextureEx(GetAssets()->seta, {pos.x-30, (float)h_positon}, 0.0f, 0.1f, WHITE);
 
     }

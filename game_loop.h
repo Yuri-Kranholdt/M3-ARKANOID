@@ -5,6 +5,13 @@
 #include <vector>
 #include "map.h"
 #include "config.h"
+#include "utils.h"
+#include <algorithm>
+#include <iostream>
+#include <cstdlib>
+#include <ctime>
+#include "assets.h"
+#include <cmath>
 
 struct Bloco {
   int vida;
@@ -17,6 +24,14 @@ struct Bloco {
   int sprite_index;
   int velocity;
   bool is_steel;
+};
+
+struct Power_Up {
+    int x;
+    int y;
+    int w;
+    int h;
+    int pow_index;
 };
 
 extern int per_line;
@@ -40,13 +55,13 @@ extern float vy;
 // Declarações das funções
 // -------------------------------------------------
 
-void block_colision(Bloco* bloco);
+bool block_colision(Bloco* bloco);
 Color cor_aleatoria();
 void read_map(const Mapa& matriz);
 void init_walls();
 void draw_blocks();
-void game_loop(int &scene, int* level);
-void load_map(int level);
+void game_loop(int &scene, int *difficulty, int *high_score);
+void load_map(int level, int *score);
 void deallocate_map();
 
 #endif

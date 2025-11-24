@@ -1,12 +1,10 @@
-#include <algorithm>
-#include <iostream>
-#include <cstdlib>
-#include <ctime>
 #include "game_loop.h"
-#include "assets.h"
-#include <cmath>
 
-int pontuação = 0;
+//int pontuação = 0;
+
+int vida = 3;
+
+int *pontuação;
 
 int per_line = 10;
 
@@ -25,9 +23,19 @@ bool starting = true;
 int tile_size = 5;
 int tile_height = 5;
 
-std::vector<Bloco> blocos;
+int power_up_velocity = 3;
 
-Bloco placa = {1, SCREEN_WIDTH/2, SCREEN_HEIGHT-bloco_h, 80, bloco_h, true, false, 0, 5};
+float multiplicador = 1.0;
+
+int pad_width = 80;
+
+int expand_counter = 0;
+int pad_vel = 5;
+
+std::vector<Bloco> blocos;
+std::vector<Power_Up> powers;
+
+Bloco placa = {1, SCREEN_WIDTH/2, SCREEN_HEIGHT-bloco_h, pad_width, bloco_h, true, false, 0, pad_vel};
 Vector2 ballPosition = { 0, 0 };
 
 Rectangle hor_src_wall;
@@ -47,7 +55,21 @@ void start_velocity(){
     vy = vy/len;
 }
 
-void block_colision(Bloco *bloco){
+void gen_power(Bloco *bloco){
+    int gerar_ou_nao = rand() % 2;
+    if(gerar_ou_nao){
+        std::cout << "novo power_up!!!" << std::endl;
+        int index = rand() % 4;
+        int power_size = bloco->w/2;
+        int power_height = bloco->h/2;
+        int power_x = bloco->x + (power_size/2);
+        int power_y = bloco->y + power_height;
+        powers.push_back({power_x, power_y, power_size, power_height, index});
+    }
+
+}
+
+bool block_colision(Bloco *bloco){
 
     if(ballPosition.x + RAIO >= bloco->x && 
        ballPosition.x - RAIO <= bloco->x + bloco->w &&
@@ -57,6 +79,8 @@ void block_colision(Bloco *bloco){
         if(!bloco->is_wall && !bloco->is_steel){
             if(bloco->vida - 1 <= 0){
                 bloco->is_dead = true;
+                *pontuação += Get_BlockAttr(bloco->sprite_index).points * multiplicador;
+                gen_power(bloco);
             }
             else {
                 bloco->vida--;
@@ -92,8 +116,10 @@ void block_colision(Bloco *bloco){
             vy = -fabs(vy);
        }
 
+       return true;
     }
 
+    return false;
 }
 
 float get_difficulty(int difficulty){
@@ -103,14 +129,6 @@ float get_difficulty(int difficulty){
     if (difficulty == 2) value = 0.50f;
 
     return value;
-}
-
-Color cor_aleatoria(){
-    unsigned char r = rand() % 256;
-    unsigned char g = rand() % 256;
-    unsigned char b = rand() % 256;
-
-    return {r, g, b, 255};
 }
 
 void read_map(const Mapa& matriz){
@@ -145,10 +163,12 @@ void deallocate_map(){
     placa.y = SCREEN_HEIGHT-bloco_h;
     starting = true;
     std::vector<Bloco>().swap(blocos);
+    pontuação = 0;
 }
 
-void load_map(int level){
+void load_map(int level, int *score){
     read_map(GetMapa(level));
+    pontuação = score;
     init_walls();
 }
 
@@ -181,16 +201,60 @@ void draw_blocks(){
     }
 }
 
-void draw_background(){
-    for(int i=0; i<SCREEN_HEIGHT/tile_height;i++){
-        for(int j=0; j<SCREEN_WIDTH/tile_size; j++){
-            Color color = (i+j)%2==0 ? Color{0, 0, 255, 255} : BLACK;
-            DrawRectangle(j*tile_size, i*tile_height, tile_size, tile_height, color);
+void interpret_power(Power_Up *power){
+    int index = power->pow_index;
+    int max_expand = 4;
+
+     switch (index) {
+        case 1:
+            if(placa.velocity < pad_vel*2) placa.velocity += 1;
+            break;
+        case 2:
+            if(expand_counter <= max_expand) placa.w += 10;
+            expand_counter += 1;
+            break;
+        case 3:
+            vida += 1;
+            break;
+        case 4:
+            multiplicador += 0.5;
+            break;
+        default:
+            break;
+    }
+}
+
+void draw_power_ups(){
+    for(Power_Up &power : powers){
+        Texture2D *tex = Get_Power(power.pow_index);
+        Rectangle dst = {power.x, power.y, power.w, power.h};
+        Rectangle src = {0, 0, tex->width, tex->height};
+        DrawTexturePro(*tex, src, dst, {0,0}, 0.0f, WHITE);
+        power.y += power_up_velocity;
+    }
+}
+
+bool power_collision(Power_Up *power){
+    if (placa.x < power->x + power->w &&
+        placa.x + placa.w > power->x &&
+        placa.y < power->y + power->h &&
+        placa.y + placa.h > power->y){
+            return true;               
+    }
+    return false;
+}
+
+void power_update(){
+    for (size_t i = 0; i < powers.size(); i++) {
+        Power_Up power = powers[i];
+        if(power_collision(&power) || power.y >= SCREEN_HEIGHT){
+            powers.erase(powers.begin() + i);
+            interpret_power(&power);
         }
     }
 }
 
-void game_loop(int &scene, int *difficulty)
+void game_loop(int &scene, int *difficulty, int *high_score)
 {
     float dt = GetFrameTime();              
     if (IsKeyDown(KEY_RIGHT)) placa.x += placa.velocity;
@@ -226,6 +290,8 @@ void game_loop(int &scene, int *difficulty)
         Rectangle dst = { placa.x, placa.y, placa.w, placa.h };
         DrawTexturePro(GetAssets()->pad1, src, dst, {0,0}, 0.0f, WHITE);
         draw_blocks();
+        draw_power_ups();
+        power_update();
 
         block_colision(&placa);
 
@@ -249,4 +315,33 @@ void game_loop(int &scene, int *difficulty)
             placa.x = wall_width;
         }
 
+        // saiu da tela por baixo
+        if(ballPosition.y >= SCREEN_HEIGHT){
+            starting = true;
+            vida -= 1;
+            placa.velocity = pad_vel;
+            expand_counter = 0;
+            placa.w = pad_width;
+            multiplicador = 1;
+        }
+
+        DrawTextCenter("ARKANOID", 30, SCREEN_HEIGHT/6, RED, REAL_WIDTH, SCREEN_WIDTH);
+
+        DrawTextCenter("HIGH SCORE", 20, SCREEN_HEIGHT/3, RED, REAL_WIDTH, SCREEN_WIDTH);
+
+        DrawTextCenter(std::to_string(*high_score).c_str(), 20, (SCREEN_HEIGHT/3)+20, WHITE, REAL_WIDTH, SCREEN_WIDTH);
+
+
+        DrawTextCenter("SCORE", 20, SCREEN_HEIGHT/2, RED, REAL_WIDTH, SCREEN_WIDTH);
+
+        DrawTextCenter(std::to_string(*pontuação).c_str(), 20, (SCREEN_HEIGHT/2)+20, WHITE, REAL_WIDTH, SCREEN_WIDTH);
+
+
+        DrawTextCenter("VIDAS", 20, SCREEN_HEIGHT/1.5, RED, REAL_WIDTH, SCREEN_WIDTH);
+
+        DrawTextCenter(std::to_string(vida).c_str(), 20, (SCREEN_HEIGHT/1.5)+20, WHITE, REAL_WIDTH, SCREEN_WIDTH);
+
+
+
+        ClearBackground(BLACK);
 }

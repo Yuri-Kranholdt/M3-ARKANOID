@@ -4,6 +4,6 @@
 #include <vector>
 #include <iostream>
 
-void pause_loop(int* scene);
+void pause_loop(int* scene, int *score, int *high_score);
 
 #endif
