@@ -61,7 +61,9 @@ void read_map(const Mapa& matriz);
 void init_walls();
 void draw_blocks();
 void game_loop(int &scene, int *difficulty, int *high_score, int* level);
-void load_map(int level, int *score);
+void load_map(int level, int *score, bool spawn_boss=false);
+void update_block(Bloco *bloco);
+void reset_power_ups();
 void deallocate_map();
 
 #endif

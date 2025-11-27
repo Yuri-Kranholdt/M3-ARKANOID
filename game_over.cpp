@@ -1,4 +1,5 @@
 #include "game_over.h"
+#include "ranking.h"
 
 namespace {
     std::vector<std::string> opcoes = {"VOLTAR AO MENU"};
@@ -22,9 +23,16 @@ void game_over_loop(int* scene, int *score, int *high_score){
 
     if(exit_code){
         if (selecionada == 0) {
-            deallocate_map();
+            // setar os pontos no arquivo
+            set_points(*score);
 
+            deallocate_map();
             up_high_score(high_score, score, scene);
+
+            // verificar se merece entrar no ranking
+            if(is_in_ranking()){
+                *scene= 7;
+            }
         }
         
     }

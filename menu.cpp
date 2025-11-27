@@ -5,6 +5,7 @@
 #include "map.h"
 #include "game_loop.h"
 #include <vector>
+#include "boss.h"
 
 // se tiver um ponto no final então é um selecionavel
 
@@ -14,7 +15,7 @@ namespace {
     std::vector<std::string> niveis = {"1", "2", "3"};
 
     //std::vector<std::string> opcoes = {"JOGAR", "NIVEL.", "DIFICULDADE.", "SAIR"};
-    std::vector<options> opcoes = {{"JOGAR", false}, {"NIVEL",true}, {"DIFICULDADE",true}, {"SAIR", false}};
+    std::vector<options> opcoes = {{"JOGAR", false}, {"NIVEL",true}, {"DIFICULDADE",true}, {"RANK", false}, {"BOSS", false}, {"SAIR", false}};
 
     int selecionada = 0;
     int select2 = 0;
@@ -44,8 +45,6 @@ void update_change(int index, std::vector<std::string> values_list, int *variabl
 
 
 void menu_loop(int* scene, int *level, int *difficulty, int *score, bool *exit){
-              
-    if (IsKeyDown(KEY_ENTER)) *scene = 0;
 
     if (IsKeyPressed(KEY_DOWN)) {
         selecionada = (selecionada + 1) % opcoes.size();
@@ -60,11 +59,22 @@ void menu_loop(int* scene, int *level, int *difficulty, int *score, bool *exit){
     if(exit_code){
 
         if(selecionada == 0) {
-            load_map(*level, score);
+            load_map(*level, score, false);
+            //init_boss();
             //printf("level ->%d\n", *level);
             *scene = 0;
         }
-        else if(selecionada == 3){
+        else if (selecionada == 3){
+            *scene = 6;
+        }
+
+        else if (selecionada == 4){
+            // carregar o boss
+            load_map(*level, score, true);
+            *scene = 0;
+        }
+        
+        else if(selecionada == 5){
             *exit = true;
         }
     }

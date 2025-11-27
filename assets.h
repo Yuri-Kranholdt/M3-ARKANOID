@@ -8,7 +8,8 @@ struct Assets {
     Texture2D pad1;
     Texture2D hor_walls;
     Texture2D ver_walls;
-    Texture2D background; 
+    Texture2D background;
+    Texture2D Ball; 
 };
 
 Assets* GetAssets();

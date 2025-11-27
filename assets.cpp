@@ -13,6 +13,7 @@ void LoadAssets(){
     assets.hor_walls = LoadTexture("img/wall4.png");
     assets.ver_walls = LoadTexture("img/wall_top.png");
     assets.background = LoadTexture("img/back1.png");
+    assets.Ball = LoadTexture("img/bola.png");
 }
 
 void UnloadAssets(){

@@ -4,6 +4,7 @@
 #include "utils.h"
 #include "assets.h"
 #include "game_loop.h"
+#include "ranking.h"
 
 namespace {
     std::vector<std::string> opcoes = {"RETOMAR", "MENU"};
@@ -30,11 +31,16 @@ void pause_loop(int* scene, int *score, int *high_score){
     if(exit_code){
         if(selecionada == 0) *scene = 0;
         else if (selecionada ==1) {
-            deallocate_map();
+            // setar os pontos no arquivo
+            set_points(*score);
 
-            if(*high_score < *score) *high_score = *score; // se superar o recorde salva em high_score
-            *score = 0;
-            *scene = 1;
+            deallocate_map();
+            up_high_score(high_score, score, scene);
+
+            // verificar se merece entrar no ranking
+            if(is_in_ranking()){
+                *scene= 7;
+            }
         }
         
     }

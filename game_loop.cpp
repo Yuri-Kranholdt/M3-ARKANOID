@@ -1,8 +1,10 @@
 #include "game_loop.h"
+#include "boss.h"
+#include "ranking.h"
 
 //int pontuação = 0;
 
-int vida;
+int vida = 3;
 
 int *pontuação;
 
@@ -37,16 +39,43 @@ int blocks_dead_num;
 std::vector<Bloco> blocos;
 std::vector<Power_Up> powers;
 
-Bloco placa = {1, SCREEN_WIDTH/2, SCREEN_HEIGHT-bloco_h, pad_width, bloco_h, true, false, 0, pad_vel};
+Bloco placa = {3, SCREEN_WIDTH/2, SCREEN_HEIGHT-bloco_h, pad_width, bloco_h, true, false, 0, pad_vel};
 Vector2 ballPosition = { 0, 0 };
 
 Rectangle hor_src_wall;
 Rectangle ver_src_wall;
 
+bool laser = false;
+float laser_w = 4;
+float laser_h = 8;
+Rectangle laser1 = {0, 0, laser_w, laser_h};
+Rectangle laser2 = {0, 0, laser_w, laser_h};
+
 float speed = 0.0;
 
 float vx = 0.0;
 float vy = 0.0;
+
+bool start_boss = false;
+
+void laser_update(Rectangle *laser, int new_x){
+    int height = placa.y - laser->height;
+    DrawRectangleRec(*laser, YELLOW);
+    laser->y -= 7;
+    for(Bloco &block : blocos){
+
+        if(block.is_dead) continue;
+
+        Rectangle block_rect = {block.x, block.y, block.w, block.h};
+        if(CheckCollisionRecs(block_rect, *laser)){
+            laser->y = height;
+            laser->x = new_x;
+            update_block(&block);
+        }
+
+    }
+    // desenhar o laser
+}
 
 void start_velocity(){
     speed = 250.0f;
@@ -60,7 +89,6 @@ void start_velocity(){
 void gen_power(Bloco *bloco){
     int gerar_ou_nao = rand() % 2;
     if(gerar_ou_nao){
-        std::cout << "novo power_up!!!" << std::endl;
         int index = rand() % 4;
         int power_size = bloco->w/2;
         int power_height = bloco->h/2;
@@ -71,6 +99,20 @@ void gen_power(Bloco *bloco){
 
 }
 
+void update_block(Bloco *bloco){
+    if(!bloco->is_wall && !bloco->is_steel){
+        if(bloco->vida - 1 <= 0){
+            bloco->is_dead = true;
+            blocks_dead_num += 1;
+            *pontuação += Get_BlockAttr(bloco->sprite_index).points * multiplicador;
+            gen_power(bloco);
+        }
+        else {
+            bloco->vida--;
+        }
+    }
+}
+
 bool block_colision(Bloco *bloco){
 
     if(ballPosition.x + RAIO >= bloco->x && 
@@ -78,17 +120,7 @@ bool block_colision(Bloco *bloco){
        ballPosition.y + RAIO >= bloco->y && 
        ballPosition.y - RAIO <= bloco->y + bloco->h){
 
-        if(!bloco->is_wall && !bloco->is_steel){
-            if(bloco->vida - 1 <= 0){
-                bloco->is_dead = true;
-                blocks_dead_num += 1;
-                *pontuação += Get_BlockAttr(bloco->sprite_index).points * multiplicador;
-                gen_power(bloco);
-            }
-            else {
-                bloco->vida--;
-            }
-        }
+       update_block(bloco);
        
        int overlap_left = (ballPosition.x + RAIO) - bloco->x;
        int overlap_right = (bloco->x + bloco->w) - (ballPosition.x - RAIO);
@@ -141,9 +173,7 @@ void read_map(const Mapa& matriz){
         for(int j=0; j<per_line; j++){
             int index = matriz[i][j];
             if(index != 0){
-                printf("valor -> %d", index);
-                int life = index == 8 or index == 9 ? 2 : 1;
-                bool is_steel = index == 8 ? true : false;
+                int life = index == 8 || index == 9 ? 4 : 1;
 
                 blocos.push_back({
                     life, 
@@ -155,7 +185,7 @@ void read_map(const Mapa& matriz){
                     false,
                     index-1,
                     0,
-                    is_steel
+                    false
                 });
             }
         }
@@ -171,12 +201,18 @@ void deallocate_map(){
     *pontuação = 0;
 }
 
-void load_map(int level, int *score){
-    read_map(GetMapa(level));
+void load_map(int level, int *score,  bool spawn_boss){
+    if(!spawn_boss){
+        read_map(GetMapa(level));
+    } else {
+        init_boss();
+    }
     pontuação = score;
-    vida = 3;
+    placa.vida = 3;
     blocks_dead_num = 0;
+    //reset_power_ups();
     init_walls();
+    start_boss = spawn_boss;
 }
 
 void init_walls(){
@@ -209,7 +245,7 @@ void draw_blocks(){
 }
 
 void interpret_power(Power_Up *power){
-    int index = power->pow_index;
+    int index = power->pow_index+1;
     int max_expand = 4;
 
      switch (index) {
@@ -221,9 +257,10 @@ void interpret_power(Power_Up *power){
             expand_counter += 1;
             break;
         case 3:
-            vida += 1;
+            placa.vida += 1;
             break;
         case 4:
+            laser = true;
             multiplicador += 0.5;
             break;
         default:
@@ -241,20 +278,26 @@ void draw_power_ups(){
     }
 }
 
-bool power_collision(Power_Up *power){
-    if (placa.x < power->x + power->w &&
-        placa.x + placa.w > power->x &&
-        placa.y < power->y + power->h &&
-        placa.y + placa.h > power->y){
-            return true;               
-    }
-    return false;
+void reset_power_ups(){
+    //starting = true;
+    placa.velocity = pad_vel;
+    expand_counter = 0;
+    placa.w = pad_width;
+    multiplicador = 1;
+    laser = false;
 }
 
 void power_update(){
     for (size_t i = 0; i < powers.size(); i++) {
         Power_Up power = powers[i];
-        if(power_collision(&power) || power.y >= SCREEN_HEIGHT){
+        Rectangle power_convert = {power.x, power.y, power.w, power.h};
+        Rectangle placa_convert = {placa.x, placa.y, placa.w, placa.h};
+
+        if(power.y >= SCREEN_HEIGHT){
+            powers.erase(powers.begin() + i);
+        }
+
+        if(CheckCollisionRecs(placa_convert, power_convert)){
             powers.erase(powers.begin() + i);
             interpret_power(&power);
         }
@@ -263,7 +306,8 @@ void power_update(){
 
 void game_loop(int &scene, int *difficulty, int *high_score, int* level)
 {
-    float dt = GetFrameTime();              
+    float dt = GetFrameTime(); 
+    
     if (IsKeyDown(KEY_RIGHT)) placa.x += placa.velocity;
     if (IsKeyDown(KEY_LEFT)) placa.x -= placa.velocity;
     if (IsKeyDown(KEY_ESCAPE)) {
@@ -296,6 +340,12 @@ void game_loop(int &scene, int *difficulty, int *high_score, int* level)
         Rectangle src = {0, 0, (float)GetAssets()->pad1.width, (float)GetAssets()->pad1.height};
         Rectangle dst = { placa.x, placa.y, placa.w, placa.h };
         DrawTexturePro(GetAssets()->pad1, src, dst, {0,0}, 0.0f, WHITE);
+
+        if(start_boss) {
+            boss_collision();
+            boss();
+        }
+
         draw_blocks();
         draw_power_ups();
         power_update();
@@ -303,15 +353,17 @@ void game_loop(int &scene, int *difficulty, int *high_score, int* level)
         block_colision(&placa);
 
         // ir para tela de game over
-        if(vida <= 0){
+        if(placa.vida <= 0){
             scene = 5;
             return;
         }
 
         // trocar de level ao vencer
         // -3 para desconsiderar os 3 muros
-        if(blocks_dead_num == (int)blocos.size()-3){
-            if(*level+1 <= MAPAS.size()){
+        //blocos.size()-3 && 
+        if(blocos.size()-3 && blocks_dead_num == (int)blocos.size()-3){
+            if(*level+1 <= MAPAS.size()-1){
+                reset_power_ups();
                 int temp = *pontuação;
                 deallocate_map();
                 *pontuação = temp;
@@ -321,8 +373,19 @@ void game_loop(int &scene, int *difficulty, int *high_score, int* level)
             else{
                 // voltar ao menu se tiver vencido o level final
                 scene = 1;
+                // verificar se deve ir primeiro para tela de cadastro de pontos
+                set_points(*pontuação);
+                if(is_in_ranking()){
+                    scene = 7;
+                }
+                deallocate_map();
             }
             
+        }
+
+        if(laser){
+            laser_update(&laser1, placa.x);
+            laser_update(&laser2, (placa.x+placa.w)-laser2.width);
         }
 
         if(IsKeyDown(KEY_SPACE) && starting){
@@ -348,11 +411,8 @@ void game_loop(int &scene, int *difficulty, int *high_score, int* level)
         // saiu da tela por baixo
         if(ballPosition.y >= SCREEN_HEIGHT){
             starting = true;
-            vida -= 1;
-            placa.velocity = pad_vel;
-            expand_counter = 0;
-            placa.w = pad_width;
-            multiplicador = 1;
+            reset_power_ups();
+            placa.vida -= 1;
         }
 
         DrawTextCenter("ARKANOID", 30, SCREEN_HEIGHT/6, RED, REAL_WIDTH, SCREEN_WIDTH);
@@ -369,9 +429,7 @@ void game_loop(int &scene, int *difficulty, int *high_score, int* level)
 
         DrawTextCenter("VIDAS", 20, SCREEN_HEIGHT/1.5, RED, REAL_WIDTH, SCREEN_WIDTH);
 
-        DrawTextCenter(std::to_string(vida).c_str(), 20, (SCREEN_HEIGHT/1.5)+20, WHITE, REAL_WIDTH, SCREEN_WIDTH);
-
-
+        DrawTextCenter(std::to_string(placa.vida).c_str(), 20, (SCREEN_HEIGHT/1.5)+20, WHITE, REAL_WIDTH, SCREEN_WIDTH);
 
         ClearBackground(BLACK);
 }

@@ -3,17 +3,6 @@
 #include "utils.h"
 
 
-//Vector2 DrawTextCenter(const char *text, int fontSize, int y, Color color) {
-    //int screenWidth = GetScreenWidth();
-
-    //int textWidth = MeasureText(text, fontSize);
-    //int x = (screenWidth - textWidth) / 2;
-
-    //DrawText(text, x, y, fontSize, color);
-
-    //return Vector2{(float)x, (float)y};
-//}
-
 Vector2 DrawTextCenter(const char *text, int fontSize, int y, Color color, int real_w, int fake_w) {
     int sidewidth = real_w-fake_w;
 
