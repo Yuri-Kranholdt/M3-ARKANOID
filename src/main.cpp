@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <ctime>
 #include "ranking.h"
+#include "resource_dir.h"
 
 int nivel = 0;
 
@@ -24,6 +25,8 @@ int main(void)
     bool exit = false;
 
     InitWindow(REAL_WIDTH, SCREEN_HEIGHT, "Arkanoid M3");
+
+    SearchAndSetResourceDir("resources");
 
     LoadAssets();
     init_blockTexures();

@@ -24,7 +24,7 @@ void rank_loop(int* scene){
 
     DrawTextCenter("-  TOP 5 JOGADORES  -", F_SIZE*1.5, SCREEN_HEIGHT/4, GREEN, REAL_WIDTH);
 
-    for(int i=0; i<rank->size(); i++){
+    for(int i=0; i<5; i++){
         int h_positon = (SCREEN_HEIGHT/3 + (i * padding));
         Score pontos = (*rank)[i];
         std::string linha = std::to_string(i+1) + "\t\t\t" + std::to_string(pontos.sco) + "\t\t" + pontos.nome;
